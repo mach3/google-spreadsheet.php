@@ -1,0 +1,17 @@
+{
+    "name": "mach3/google-spreadsheet",
+    "description": "Google spreadsheet client",
+    "require": {
+        "google/apiclient": "1.*"
+    },
+    "autoload": {
+    	"classmap": ["src"]
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "mach3",
+            "email": "mach3@mach3.jp"
+        }
+    ]
+}
