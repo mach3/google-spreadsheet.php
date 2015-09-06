@@ -107,17 +107,17 @@ class Google_Spreadsheet_Sheet {
 		$this->items = array();
 
 		foreach($entry as $col){
-			$r = ((int) preg_replace("/^[A-Z]+/", "", $col["title"]["\$t"]));
-			$c = preg_replace("/\d+$/", "", $col["title"]["\$t"]);
+			preg_match("/^([A-Z]+)(\d+)$/", $col["title"]["\$t"], $m);
+			$content = $col["content"]["\$t"];
+			$r = (int) $m[2];
+			$c = $m[1];
 			if($r === 1){
-				$this->fields[$c] = $col["content"]["\$t"];
+				$this->fields[$c] = $content;
 				continue;
 			}
-			if(! $this->items[$r]){
-				$this->items[$r] = array();
-			}
 			if($this->fields[$c]){
-				$this->items[$r][$this->fields[$c]] = $col["content"]["\$t"];
+				$this->items[$r] = is_array($this->items[$r]) ? $this->items[$r] : array();
+				$this->items[$r][$this->fields[$c]] = $content;
 			}
 		}
 	}
