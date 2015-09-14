@@ -51,6 +51,31 @@ class Google_Spreadsheet_Sheet {
 	}
 
 	/**
+	 * Select rows by condition
+	 *
+	 * @param {Closure|Array} $condition
+	 * @return {Array}
+	 */
+	public function select($condition = null){
+		if(is_callable($condition)){
+			return array_filter($this->items, $condition);
+		}
+		if(is_array($condition)){
+			$result = array();
+			foreach($this->items as $row){
+				$invalid = false;
+				foreach($condition as $key => $value){
+					if($row[$key] !== $value){ $invalid = true; }
+				}
+				if($invalid){ continue; }
+				array_push($result, $row);
+			}
+			return $result;
+		}
+		return $this->items;
+	}
+
+	/**
 	 * Update the value of column
 	 * @param {Integer} $row
 	 * @param {Integer|String} $col ... Column number or field's name

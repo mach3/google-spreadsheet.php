@@ -32,7 +32,18 @@ $sheet = $file->sheet("Sheet1");
 var_dump($sheet->items);
 ```
 
-## Features
+## Usage
+
+### Select rows
+
+```php
+// Array
+$items = $sheet->select(array("id" => "1"));
+// Closure
+$items = $sheet->select(function($row){
+	return (int) $row["age"] < 30;
+});
+```
 
 ### Insert a new row
 
@@ -57,7 +68,17 @@ $sheet->update(
 ### Get up-to-date table data
 
 ```php
-$items = $sheet->fetch()->items;
+$items = $sheet->fetch(true)->items;
+```
+
+### Save cache
+
+```php
+$client->config(array(
+	"cache" => true,
+	"cache_dir" => "cache",
+	"cache_expires" => 3600
+));
 ```
 
 
