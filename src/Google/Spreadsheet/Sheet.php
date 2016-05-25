@@ -141,7 +141,7 @@ class Google_Spreadsheet_Sheet {
 				continue;
 			}
 			if($this->fields[$c]){
-				$this->items[$r] = is_array($this->items[$r]) ? $this->items[$r] : array();
+				$this->items[$r] = array_key_exists($r, $this->items) ? $this->items[$r] : array();
 				$this->items[$r][$this->fields[$c]] = $content;
 			}
 		}
