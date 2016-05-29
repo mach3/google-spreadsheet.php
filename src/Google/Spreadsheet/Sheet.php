@@ -140,10 +140,9 @@ class Google_Spreadsheet_Sheet {
 				$this->fields[$c] = $content;
 				continue;
 			}
-			if(array_key_exists($r, $this->fields)){
-				$this->items[$r] = array_key_exists($r, $this->items) ? $this->items[$r] : array();
-				$this->items[$r][$this->fields[$c]] = $content;
-			}
+			$key = array_key_exists($c, $this->fields) ? $this->fields[$c] : $c;
+			$this->items[$r] = array_key_exists($r, $this->items) ? $this->items[$r] : array();
+			$this->items[$r][$key] = $content;
 		}
 	}
 

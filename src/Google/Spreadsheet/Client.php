@@ -127,6 +127,14 @@ class Google_Spreadsheet_Client {
             $curl = new Google_IO_Curl($this->client);
             $res = $curl->executeRequest($req);
             $feed = $res[0];
+
+            // error
+            if($res[2] >= 400){
+                if(preg_match('/<title>(.+?)<\/title>/', $res[0], $m)){
+                    throw new Exception($m[1]);
+                }
+                throw new Exception($res[0]);
+            }
             if($cache){
                 $this->cache($url, $feed);
             }
