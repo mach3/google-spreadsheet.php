@@ -61,41 +61,45 @@ class Google_Spreadsheet_Sheet {
 			return array_filter($this->items, $condition);
 		}
 		if(is_array($condition)){
-			$result = array();
-			foreach($this->items as $row){
-				$invalid = false;
+			return array_filter($this->items, function($item) use ($condition){
+				$invalid = 0;
 				foreach($condition as $key => $value){
-					if($row[$key] !== $value){ $invalid = true; }
+					if($item[$key] !== $value){ $invalid ++; }
 				}
-				if($invalid){ continue; }
-				array_push($result, $row);
-			}
-			return $result;
+				return ! $invalid;
+			});
 		}
 		return $this->items;
 	}
 
 	/**
 	 * Update the value of column
-	 * @param {Integer} $row
+	 * @param {Integer|Closure|Array} $row ... Row number or condition to select
 	 * @param {Integer|String} $col ... Column number or field's name
 	 * @param {String} $value
 	 * @return {Google_Spreadsheet_Sheet} ... This
 	 */
 	public function update($row, $col, $value){
 		$col = is_string($col) ? array_search($col, array_values($this->fields), true) + 1 : $col;
-		$body = sprintf(
-			'<entry xmlns="http://www.w3.org/2005/Atom" xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-            <gs:cell row="%u" col="%u" inputValue="%s"/>
-			</entry>',
-			$row, $col, htmlspecialchars($value)
-		);
-		$this->client->request(
-			$this->link["cellsfeed"],
-			"POST",
-			array("Content-Type" => "application/atom+xml"),
-			$body
-		);
+		if((is_array($row) && array_values($row) !== $row) || is_callable($row)){
+			$row = array_keys($this->select($row));
+		} else if(! is_array($row)){
+			$row = array($row);
+		}
+		foreach($row as $r){
+			$body = sprintf(
+				'<entry xmlns="http://www.w3.org/2005/Atom" xmlns:gs="http://schemas.google.com/spreadsheets/2006">'
+	            . '<gs:cell row="%u" col="%u" inputValue="%s"/>'
+				. '</entry>',
+				$r, $col, htmlspecialchars($value)
+			);
+			$this->client->request(
+				$this->link["cellsfeed"],
+				"POST",
+				array("Content-Type" => "application/atom+xml"),
+				$body
+			);
+		}
 		return $this;
 	}
 
