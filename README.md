@@ -63,6 +63,28 @@ $sheet->update(
 	"name", // field's name (or column number as Integer)
 	"Tom"
 );
+
+$sheet->update(
+	array(8,16,24), // row numbers
+	"name",
+	"Tom"
+);
+
+$sheet->update(
+	array(
+		"name" => "Tom" // condition to select
+	),
+	"email",
+	"tom@example.com"
+);
+
+$sheet->update(
+	function($row){
+		return (int) $row["age"] > 80; // condition to select as closure
+	},
+	"active",
+	"false"
+);
 ```
 
 ### Get up-to-date table data
