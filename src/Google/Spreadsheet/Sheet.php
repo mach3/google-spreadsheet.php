@@ -64,7 +64,8 @@ class Google_Spreadsheet_Sheet {
 			return array_filter($this->items, function($item) use ($condition){
 				$invalid = 0;
 				foreach($condition as $key => $value){
-					if($item[$key] !== $value){ $invalid ++; }
+					$v = array_key_exists($key, $item) ? $item[$key] : "";
+					if($v !== $value){ $invalid ++; }
 				}
 				return ! $invalid;
 			});
