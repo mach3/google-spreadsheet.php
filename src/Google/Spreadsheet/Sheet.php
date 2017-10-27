@@ -27,6 +27,8 @@ class Google_Spreadsheet_Sheet {
 
 		foreach($this->meta["link"] as $link){
 			switch(true){
+				case strstr($link["rel"], "#exportcsv"):
+					$this->link["exportcsv"] = $link["href"]; break;
 				case strstr($link["rel"], "#cellsfeed"):
 					$this->link["cellsfeed"] = $link["href"] . "?alt=json"; break;
 				case strstr($link["rel"], "#listfeed"):
@@ -48,6 +50,16 @@ class Google_Spreadsheet_Sheet {
 		$data = $this->client->request($this->link["cellsfeed"], "GET", array(), null, $force);
 		$this->process($data["feed"]["entry"]);
 		return $this;
+	}
+
+	/**
+	 * Get a csv version of the sheet
+	 *
+	 * @param {Boolean} $force ... Ignore cache data or not
+	 * @return {String} ... csv
+	 */
+	public function csv($force = false){
+		return $this->client->request($this->link["exportcsv"], "GET", array(), null, $force);
 	}
 
 	/**

@@ -103,6 +103,18 @@ $client->config(array(
 ));
 ```
 
+### Get CSV
+
+```php
+$client = Google_Spreadsheet::getClient("the/path/to/credential.json");
+// Get the file by file ID
+$file = $client->file("XXXxxxXXXXxxxXXXX");
+// Get the sheet by title
+$sheet = $file->sheet("Sheet1");
+// Dump CSV
+var_dump($sheet->csv());
+```
+
 
 ## Requirement
 
