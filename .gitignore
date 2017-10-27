@@ -4,3 +4,8 @@ composer.lock
 *.swp
 ~*
 *~
+
+### macOS ###
+*.DS_Store
+.AppleDouble
+.LSOverride

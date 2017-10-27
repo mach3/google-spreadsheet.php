@@ -92,7 +92,7 @@ class Google_Spreadsheet_Client {
      */
     public function getAccessToken(){
         $session_key = $this->config("session_key");
-        $token = array_key_exists($this->options["session_key"], $_SESSION) ? 
+        $token = array_key_exists($this->options["session_key"], $_SESSION) ?
             $_SESSION[$session_key] : null;
         if($token){
             // expired ?
@@ -139,7 +139,8 @@ class Google_Spreadsheet_Client {
                 $this->cache($url, $feed);
             }
         }
-        return json_decode($feed, true);
+        $result = json_decode($feed, true);
+        return (json_last_error() === JSON_ERROR_NONE) ? $result : $feed;
     }
 
     /**

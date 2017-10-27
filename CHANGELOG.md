@@ -1,6 +1,10 @@
 
 # Change Log
 
+## 0.1.7
+
+- csv: adding the possibility to get the CSV version of a Sheet
+
 ## 0.1.5
 
 - improve: let Sheet::update() to receive condition as 1st argument
