@@ -2,14 +2,14 @@
 # Google Spreadsheet Client for PHP
 
 
-Google Spreadsheet Client for PHP. This requires "google/apiclient" package.
+Google Spreadsheet Client for PHP. This requires 'google/apiclient' package.
 
 
 ## Get started
 
 ### 1. Get key file
 
-1. Log in [Google Developper Console](https://console.developers.google.com)
+1. Log in [Google Developer Console](https://console.developers.google.com)
 2. Create new project
 3. Create **Service Account** credentials in the project
 4. Download key file as JSON
@@ -17,17 +17,17 @@ Google Spreadsheet Client for PHP. This requires "google/apiclient" package.
 ### 2. Create spreadsheet
 
 1. Create a new spreadsheet in [Google Drive](https://drive.google.com)
-2. Authorize the email address, which is found as "client_email" in key file, to read and edit.
+2. Authorize the email address, which is found as 'client_email' in key file, to read and edit.
 3. Save the **file ID** from address bar.
 
 ### 3. Access by PHP
 
 ```php
-$client = Google_Spreadsheet::getClient("the/path/to/credential.json");
-// Get the file by file ID
-$file = $client->file("XXXxxxXXXXxxxXXXX");
-// Get the sheet by title
-$sheet = $file->sheet("Sheet1");
+$client = Google_Spreadsheet::getClient('the/path/to/credential.json');
+// Get the sheet instance by sheets_id and sheet name
+$sheet = $client->file('XXXxxxXXXXxxxXXXX')->sheet('Sheet1');
+// Fetch data from remote (or cache)
+$sheet->fetch();
 // Flush all rows in the sheet
 var_dump($sheet->items);
 ```
@@ -38,68 +38,70 @@ var_dump($sheet->items);
 
 ```php
 // Array
-$items = $sheet->select(array("id" => "1"));
+$items = $sheet->select(array(
+  'id' => '1'
+));
 // Closure
 $items = $sheet->select(function($row){
-	return (int) $row["age"] < 30;
+  return (int) $row['age'] < 30;
 });
 ```
 
 ### Insert a new row
 
 ```php
+// Insert a new row
 $sheet->insert(array(
-	"name" => "John",
-	"age" => 23,
-	"email" => "john@example.com"
+  'name' => 'John',
+  'age' => 23,
+  'email' => 'john@example.com'
 ));
+
+// Get up-to-date items
+$items = $sheet->fetch(true)->items;
 ```
 
-### Update column's value
+### Update rows
 
 ```php
+// Update rows selected by array
 $sheet->update(
-	8, // row number
-	"name", // field's name (or column number as Integer)
-	"Tom"
+  array(
+    'email' => 'tom@example.com'
+  ),
+  array(
+    'name' => 'Tom'
+  )
 );
 
+// Update rows selected by closure
 $sheet->update(
-	array(8,16,24), // row numbers
-	"name",
-	"Tom"
+  array(
+    'email' => 'tom@example.com'
+  ),
+  function($row){
+    return $row['name'] === 'Tom';
+  }
 );
 
-$sheet->update(
-	array(
-		"name" => "Tom" // condition to select
-	),
-	"email",
-	"tom@example.com"
-);
-
-$sheet->update(
-	function($row){
-		return (int) $row["age"] > 80; // condition to select as closure
-	},
-	"active",
-	"false"
-);
+// Get up-to-date items
+$items = $sheet->fetch(true)->items;
 ```
 
 ### Get up-to-date table data
 
 ```php
+// Pass `true` to ignore cache
 $items = $sheet->fetch(true)->items;
 ```
 
-### Save cache
+### Save cache option
 
 ```php
-$client->config(array(
-	"cache" => true,
-	"cache_dir" => "cache",
-	"cache_expires" => 3600
+$sheet->config(array(
+  'cache' => true,
+  'cache_dir' => __DIR__ . '/cache',
+  'cache_expires' => 360
 ));
 ```
 
