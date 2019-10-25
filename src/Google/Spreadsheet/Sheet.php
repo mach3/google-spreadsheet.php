@@ -2,154 +2,246 @@
 
 /**
  * Google_Spreadsheet_Sheet
- * ------------------------
- * @class Instance represents Google Spreadsheet's sheet
+ * 
+ * @class Fetch or process data in spreadsheet
  */
 
 class Google_Spreadsheet_Sheet {
 
-	private $meta = null; // Meta info of the sheet
-	private $client = null; // Google_Spreadsheet_Client instance
-	private $link = array(); // Collection of links
+  private $client = null;
+  private $id = null;
+  private $name = null;
+  private $sheet = null;
+  private $values = null;
 
-	public $fields = null; // Fields of table
-	public $items = null; // Data of table
+  public $header = null;
+  public $items = null;
 
-	/**
-	 * Constructor
-	 *
-	 * @param {Array} $meta
-	 * @param {Google_Spreadsheet_Client} $client
-	 */
-	public function __construct($meta, $client){
-		$this->meta = $meta;
-		$this->client = $client;
+  private $options = array(
+    'cache' => false,
+    'cache_dir' => 'cache',
+    'cache_expires' => 600
+  );
 
-		foreach($this->meta["link"] as $link){
-			switch(true){
-				case strstr($link["rel"], "#cellsfeed"):
-					$this->link["cellsfeed"] = $link["href"] . "?alt=json"; break;
-				case strstr($link["rel"], "#listfeed"):
-					$this->link["listfeed"] = $link["href"] . "?alt=json"; break;
-				default: break;
-			}
-		}
+  /**
+   * @constructor
+   * @param string $name
+   * @param string $id
+   * @param Google_Client $client
+   */
+  public function __construct ($name, $id, $client) {
+    $this->client = $client;
+    $this->id = $id;
+    $this->name = $name;
+    $this->sheet = new Google_Service_Sheets($this->client);
+  }
 
-		$this->fetch();
-	}
+  /**
+   * Configure options
+   * 
+   * @param array $options
+   * @return $this
+   */
+  public function config ($options) {
+    foreach ($options as $key => $value) {
+      if (array_key_exists($key, $this->options)) {
+        $this->options[$key] = $value;
+      }
+    }
+    return $this;
+  }
 
-	/**
-	 * Fetch the table data
-	 *
-	 * @param {Boolean} $force ... Ignore cache data or not
-	 * @return {Google_Spreadsheet_Sheet} ... This
-	 */
-	public function fetch($force = false){
-		$data = $this->client->request($this->link["cellsfeed"], "GET", array(), null, $force);
-		$this->process($data["feed"]["entry"]);
-		return $this;
-	}
+  /**
+   * Fetch data from Sheets API or cache
+   * - Automatically parse the data
+   * - When load data from remote, save cache
+   * 
+   * @param boolean $force
+   * @return $this
+   */
+  public function fetch ($force = false) {
+    if ($force || !$this->getCache(true)) {
+      $res = $this->sheet->spreadsheets_values->get($this->id, $this->name);
+      if ($res && is_object($res) && is_array($res->values)) {
+        $this->values = $res->values;
+        $this->parse();
+        if ($this->options['cache']) {
+          $this->saveCache();
+        }
+      }
+    }
+    else {
+      $cache = $this->getCache();
+      $this->values = $cache['values'];
+      $this->parse();
+    }
+    return $this;
+  }
 
-	/**
-	 * Select rows by condition
-	 *
-	 * @param {Closure|Array} $condition
-	 * @return {Array}
-	 */
-	public function select($condition = null){
-		if(is_callable($condition)){
-			return array_filter($this->items, $condition);
-		}
-		if(is_array($condition)){
-			return array_filter($this->items, function($item) use ($condition){
-				$invalid = 0;
-				foreach($condition as $key => $value){
-					$v = array_key_exists($key, $item) ? $item[$key] : "";
-					if($v !== $value){ $invalid ++; }
-				}
-				return ! $invalid;
-			});
-		}
-		return $this->items;
-	}
+  /**
+   * Parse multidimensional array data from spreadsheet to associative array
+   * 
+   * @return $this
+   */
+  public function parse () {
+    $values = $this->values;
+    $header = array();
+    $items = array();
+    foreach ($values as $i => $row) {
+      if (!$i) {
+        $header = $row;
+        continue;
+      }
+      $items[$i] = array();
+      foreach ($header as $j => $key) {
+        $items[$i][$key] = array_key_exists($j, $row) ? $row[$j] : '';
+      }
+    }
+    $this->header = $header;
+    $this->items = $items;
+    return $this;
+  }
 
-	/**
-	 * Update the value of column
-	 * @param {Integer|Closure|Array} $row ... Row number or condition to select
-	 * @param {Integer|String} $col ... Column number or field's name
-	 * @param {String} $value
-	 * @return {Google_Spreadsheet_Sheet} ... This
-	 */
-	public function update($row, $col, $value){
-		$col = is_string($col) ? array_search($col, array_values($this->fields), true) + 1 : $col;
-		if((is_array($row) && array_values($row) !== $row) || is_callable($row)){
-			$row = array_keys($this->select($row));
-		} else if(! is_array($row)){
-			$row = array($row);
-		}
-		foreach($row as $r){
-			$body = sprintf(
-				'<entry xmlns="http://www.w3.org/2005/Atom" xmlns:gs="http://schemas.google.com/spreadsheets/2006">'
-	            . '<gs:cell row="%u" col="%u" inputValue="%s"/>'
-				. '</entry>',
-				$r, $col, htmlspecialchars($value)
-			);
-			$this->client->request(
-				$this->link["cellsfeed"],
-				"POST",
-				array("Content-Type" => "application/atom+xml"),
-				$body
-			);
-		}
-		return $this;
-	}
+  /**
+   * Select row by condition
+   * The condition has to be array or function
+   * 
+   * @param array|function $condition
+   * @return array $result
+   */
+  public function select ($condition) {
+    $result = null;
+    if (is_callable($condition)) {
+      $result = array_filter($this->items, $condition);
+    }
+    else if (is_array($condition)) {
+      $result = array_filter($this->items, function ($row) use ($condition) {
+        $valid = true;
+        foreach ($condition as $key => $value) {
+          if ($row[$key] !== $value) {
+            $valid = false;
+          }
+        }
+        return $valid;
+      });
+    }
+    return $result;
+  }
 
-	/**
-	 * Insert a row to the table
-	 * @param {Array} $vars
-	 * @return {Google_Spreadsheet_Sheet} ... This
-	 */
-	public function insert($vars){
-		$body = '<entry xmlns="http://www.w3.org/2005/Atom" xmlns:gsx="http://schemas.google.com/spreadsheets/2006/extended">';
-		foreach($this->fields as $c => $key){
-			if(! array_key_exists($key, $vars)){ continue; }
-			$value = htmlspecialchars($vars[$key]);
-			$body .= "<gsx:{$key}>{$value}</gsx:{$key}>";
-		}
-		$body .= "</entry>";
-		$this->client->request(
-			$this->link["listfeed"],
-			"POST",
-			array("Content-Type" => "application/atom+xml"),
-			$body
-		);
-		return $this;
-	}
+  /**
+   * Insert a new row to spreadsheet
+   * Forcely fetch up-to-date data from remote before inserting
+   * 
+   * @param array $vars
+   * @return Google_Service_Sheets_AppendValuesResponse $response
+   */
+  public function insert ($vars) {
+    $this->fetch(true);
+    $vars = (array) $vars;
+    $values = array();
+    $values[] = array();
+    foreach ($this->header as $key) {
+      array_push($values[0], in_array($key, array_keys($vars)) ? (string) $vars[$key] : '');
+    }
+    $body = new Google_Service_Sheets_ValueRange(array('values' => $values));
+    $params = array('valueInputOption' => 'USER_ENTERED');
+    return $this->sheet->spreadsheets_values->append($this->id, $this->name, $body, $params);
+  }
 
-	/**
-	 * Process the entry data fetched from cellfeed API
-	 * Update its `items` property
-	 *
-	 * @param {Array} $entry
-	 */
-	private function process($entry){
-		$this->fields = array();
-		$this->items = array();
+  /**
+   * Update values by condition
+   * Forcely fetch up-to-date data from remote before updating
+   * 
+   * @param array $vars
+   * @param array|function $condition
+   * @return Google_Service_Sheets_AppendValuesResponse $response
+   */
+  public function update ($vars, $condition) {
+    $this->fetch(true);
+    $rows = array_keys($this->select($condition));
+    $data = array();
+    foreach ($vars as $key => $value) {
+      $c = array_search($key, $this->header);
+      if (!$c) continue;
+      $col = $this->getColumnLetter($c);
+      foreach ($rows as $r) {
+        $r += 1;
+        $data[] = new Google_Service_Sheets_ValueRange(array(
+          'range' => $this->name . "!${col}${r}",
+          'values' => array(
+            array($value)
+          )
+        ));
+      }
+    }
+    if (count($data)) {
+      $body = new Google_Service_Sheets_BatchUpdateValuesRequest(array(
+        'valueInputOption' => 'USER_ENTERED',
+        'data' => $data
+      ));
+      return $this->sheet->spreadsheets_values->batchUpdate($this->id, $body);
+    }
+    return null;
+  }
 
-		foreach($entry as $col){
-			preg_match("/^([A-Z]+)(\d+)$/", $col["title"]["\$t"], $m);
-			$content = $col["content"]["\$t"];
-			$r = (int) $m[2];
-			$c = $m[1];
-			if($r === 1){
-				$this->fields[$c] = $content;
-				continue;
-			}
-			$key = array_key_exists($c, $this->fields) ? $this->fields[$c] : $c;
-			$this->items[$r] = array_key_exists($r, $this->items) ? $this->items[$r] : array();
-			$this->items[$r][$key] = $content;
-		}
-	}
+  /**
+   * Get column letter (A1 notation) from number
+   * 
+   * @param integer $index
+   * @return string $result
+   */
+  private function getColumnLetter ($index) {
+    $s = array();
+    for ($i = $index; $i > 0; $i = intval(($i) / 26)) {
+      array_push($s, chr(65 + (($i) % 26)));
+    }
+    return implode('', array_reverse($s));
+  }
+
+  /**
+   * Get cache file path
+   * 
+   * @return string $path
+   */
+  private function getCachePath () {
+    return implode('/', array(
+      $this->options['cache_dir'],
+      $this->id,
+      urlencode($this->name)
+    ));
+  }
+
+  /**
+   * Get cache data
+   * Or test whether cache file exists and is alive
+   * 
+   * @param boolean $test
+   * @return array|boolean $result
+   */
+  private function getCache ($test = false) {
+    $file = $this->getCachePath();
+    $hasCache = $this->options['cache']
+      && file_exists($file)
+      && (time() - filemtime($file)) < $this->options['cache_expires'];
+    if ($test) {
+      return $hasCache;
+    } elseif ($hasCache) {
+      return unserialize(file_get_contents($file));
+    }
+    return null;
+  }
+
+  /**
+   * Save current data to cache file
+   */
+  private function saveCache () {
+    $dir = implode('/', array($this->options['cache_dir'], $this->id));
+    if (!file_exists($dir)) {
+      mkdir($dir);
+    }
+    return file_put_contents($this->getCachePath(), serialize(array(
+      'values' => $this->values
+    )));
+  }
 
 }
-
