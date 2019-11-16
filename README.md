@@ -34,6 +34,20 @@ var_dump($sheet->items);
 
 ## Usage
 
+### Initialize sheet (>= 1.1.0)
+
+The target sheet must be empty
+
+```php
+$sheet->init(array(
+  'id',
+  'name',
+  'age',
+  'email',
+  'note'
+));
+```
+
 ### Select rows
 
 ```php
@@ -86,6 +100,18 @@ $sheet->update(
 
 // Get up-to-date items
 $items = $sheet->fetch(true)->items;
+```
+
+### Update cells (>=1.1.0)
+
+`edit` method let you to update cells' value manually
+
+```php
+// Update `B2` cell
+$sheet->edit(2, 2, 'Tom');
+
+// Update `C1:C4` cells
+$sheet->edit(3, 1, array(1, 'John', 23, 'john@example.com'));
 ```
 
 ### Get up-to-date table data
