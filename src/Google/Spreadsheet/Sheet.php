@@ -56,6 +56,20 @@ class Google_Spreadsheet_Sheet {
   }
 
   /**
+   * Initialize sheet with header items
+   * 
+   * @param array $header
+   * @return Google_Service_Sheets_AppendValuesResponse $response
+   */
+  public function init ($header) {
+    $this->fetch(true);
+    if (!empty($this->values)) {
+      throw new Exception("'{$this->name}' is not empty");
+    }
+    return $this->edit(1, 1, $header);
+  }
+
+  /**
    * Fetch data from Sheets API or cache
    * - Automatically parse the data
    * - When load data from remote, save cache
