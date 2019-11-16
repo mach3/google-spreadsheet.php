@@ -162,8 +162,8 @@ class Google_Spreadsheet_Sheet {
     $data = array();
     foreach ($vars as $key => $value) {
       $c = array_search($key, $this->header);
-      if (!$c) continue;
-      $col = $this->getColumnLetter($c);
+      if (false === $c) continue;
+      $col = $this->getColumnLetter($c + 1);
       foreach ($rows as $r) {
         $r += 1;
         $data[] = new Google_Service_Sheets_ValueRange(array(
@@ -193,7 +193,7 @@ class Google_Spreadsheet_Sheet {
   private function getColumnLetter ($index) {
     $s = array();
     for ($i = $index; $i > 0; $i = intval(($i) / 26)) {
-      array_push($s, chr(65 + (($i) % 26)));
+      array_push($s, chr(65 + (($i - 1) % 26)));
     }
     return implode('', array_reverse($s));
   }
