@@ -23,6 +23,10 @@ class Google_Spreadsheet_Sheet {
     'cache_expires' => 600
   );
 
+  private $params = array(
+    'valueInputOption' => 'USER_ENTERED'
+  );
+
   /**
    * @constructor
    * @param string $name
@@ -129,6 +133,22 @@ class Google_Spreadsheet_Sheet {
   }
 
   /**
+   * Update cells' value by row and column number
+   * 
+   * @param integer $row
+   * @param integer $col
+   * @param array|string $values
+   * @return Google_Service_Sheets_AppendValuesResponse $response
+   */
+  public function edit ($row, $col, $values) {
+    $values = gettype($values) !== 'array' ? (array) $values : $values;
+    $target = $this->getColumnLetter($col) . $row;
+    $range = implode('!', array($this->name, $target));
+    $body = new Google_Service_Sheets_ValueRange(array('values' => array($values)));
+    return $this->sheet->spreadsheets_values->update($this->id, $range, $body, $this->params);
+  }
+
+  /**
    * Insert a new row to spreadsheet
    * Forcely fetch up-to-date data from remote before inserting
    * 
@@ -144,8 +164,7 @@ class Google_Spreadsheet_Sheet {
       array_push($values[0], in_array($key, array_keys($vars)) ? (string) $vars[$key] : '');
     }
     $body = new Google_Service_Sheets_ValueRange(array('values' => $values));
-    $params = array('valueInputOption' => 'USER_ENTERED');
-    return $this->sheet->spreadsheets_values->append($this->id, $this->name, $body, $params);
+    return $this->sheet->spreadsheets_values->append($this->id, $this->name, $body, $this->params);
   }
 
   /**
@@ -175,10 +194,9 @@ class Google_Spreadsheet_Sheet {
       }
     }
     if (count($data)) {
-      $body = new Google_Service_Sheets_BatchUpdateValuesRequest(array(
-        'valueInputOption' => 'USER_ENTERED',
-        'data' => $data
-      ));
+      $params = $this->params;
+      $params['data'] = $data;
+      $body = new Google_Service_Sheets_BatchUpdateValuesRequest($params);
       return $this->sheet->spreadsheets_values->batchUpdate($this->id, $body);
     }
     return null;
