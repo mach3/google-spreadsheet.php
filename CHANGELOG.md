@@ -1,6 +1,11 @@
 
 # Change Log
 
+## 1.1.0
+
+- add `$sheet->edit()` to update cells' value by row and column number manually
+- add `$sheet->init()` to initialize sheet with header items
+
 ## 1.0.0
 
 - rewrite all for Sheets API v4
