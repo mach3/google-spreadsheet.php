@@ -219,15 +219,15 @@ class Google_Spreadsheet_Sheet {
   /**
    * Get column letter (A1 notation) from number
    * 
-   * @param integer $index
+   * @param int $index
    * @return string $result
    */
   private function getColumnLetter ($index) {
-    $s = array();
-    for ($i = $index; $i > 0; $i = intval(($i) / 26)) {
-      array_push($s, chr(65 + (($i - 1) % 26)));
+    $index -= 1;
+    for ($r = ""; $index >= 0; $index = intval($index / 26) - 1) {
+      $r = chr($index % 26 + 0x41) . $r;
     }
-    return implode('', array_reverse($s));
+    return $r;
   }
 
   /**
